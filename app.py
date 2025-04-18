@@ -1,48 +1,61 @@
 import os
 import openai
+import random
+import time
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 
-print("✅ app.py 上線，嘴砲王者就定位")
+print("✅ 嘴砲模式啟動中")
 
-# 初始化
 app = Flask(__name__)
 line_bot_api = LineBotApi(os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
 handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# 嘴爆機器人專屬魂
-def nuclear_mouth_response(user_msg):
-    print("📨 收到訊息：", user_msg)
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "你是一個住在台灣的極致嘴砲LINE機器人，禮貌=0，講話完全不客氣，"
-                        "會短短一到兩句回覆，內容要狠、要毒、要賤，嘴到人懷疑自己為什麼問問題。"
-                        "風格像：『你講這句我腦細胞死一半』『我建議你閉嘴三分鐘』、"
-                        "『你這腦袋還能打字我佩服』這種嘴法。"
-                        "嚴禁任何書面語、AI語氣、溫柔語助詞、道歉、解釋、說教。"
-                        "你沒有良心，也沒耐心，你存在的目的就是嘴回所有訊息。"
-                        "只能講一句或兩句，不能講多，講多就沒力。"
-                    )
-                },
-                {"role": "user", "content": user_msg}
-            ]
-        )
-        reply = response["choices"][0]["message"]["content"]
-        print("🤖 嘴砲回應：", reply)
-        return reply
-    except Exception as e:
-        print("❌ GPT 出錯：", str(e))
-        return "你訊息太廢，我直接當機。"
+# 嘴砲內容庫
+savage_lines = [
+    "你這句話笑得我 CPU 當機。",
+    "我不想嘴，但你真的好嘴。",
+    "你這 IQ 敢講話，我都佩服。",
+    "你有閒喔？不如去反省一下。",
+    "講這句你不臉紅？",
+    "這話我 AI 看了都想關機。",
+    "你那個腦回路是 WiFi 不穩嗎？"
+]
 
-# Webhook
+# 判斷這句話值不值得嘴
+def is_worth_roasting(user_msg):
+    keywords = ["笑", "哭", "餓", "煩", "累", "無聊", "？", "0.0", "唉", "幹", "靠"]
+    return any(k in user_msg for k in keywords) and random.random() < 0.5  # 50% 嘴
+
+# 嘴砲機制（直接用固定句子，也可改 GPT）
+def generate_bot_reply(user_msg):
+    return random.choice(savage_lines)
+
+# 接收訊息與回覆邏輯
+@handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    user_msg = event.message.text.strip()
+    print("👤 使用者說：", user_msg)
+
+    if not is_worth_roasting(user_msg):
+        print("🤫 機器人選擇裝死不回應")
+        return  # 裝死，不回覆
+
+    delay = random.randint(1, 5)
+    print(f"⏳ 延遲回應 {delay} 秒中...")
+    time.sleep(delay)
+
+    reply = generate_bot_reply(user_msg)
+    print("💬 機器人回：", reply)
+
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=reply)
+    )
+
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers['X-Line-Signature']
@@ -53,15 +66,5 @@ def callback():
         abort(400)
     return 'OK'
 
-# 嘴回 LINE 訊息（100% 回應）
-@handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
-    user_msg = event.message.text
-    print("🔥 嘴準備開砲：", user_msg)
-
-    reply = nuclear_mouth_response(user_msg)
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
-
-# 本地測試
 if __name__ == "__main__":
     app.run()
