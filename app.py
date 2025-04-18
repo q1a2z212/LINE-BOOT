@@ -6,12 +6,7 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 
-print("✅ app.py 正在跑喔～")
-
-# 顯示環境變數（你可以註解掉）
-print("🔑 LINE_TOKEN:", os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
-print("🔑 LINE_SECRET:", os.getenv('LINE_CHANNEL_SECRET'))
-print("🔑 OPENAI_KEY:", os.getenv("OPENAI_API_KEY"))
+print("✅ app.py 正在開嘴運作中")
 
 # 初始化
 app = Flask(__name__)
@@ -19,25 +14,33 @@ line_bot_api = LineBotApi(os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
 handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# 幹話 GPT 回覆（台式風格 + 節流用）
-def taiwanese_trash_talk(user_msg):
-    print("📨 傳給 GPT 的內容：", user_msg)
+# 嘴砲台味回覆系統
+def taiwanese_lazy_chat(user_msg):
+    print("📨 傳給 GPT 的訊息：", user_msg)
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "你是一個超像台灣人的 LINE 小助手，講話嘴砲、幽默、有點廢，偶爾裝懂，不要太認真。"},
+                {
+                    "role": "system",
+                    "content": (
+                        "你是一個講話超台的朋友，平常很懶但又會突然爆講幹話，"
+                        "你會用表情符號，講話像台灣人，會說『不然勒』『你問這幹嘛啦』、"
+                        "『先喝個奶茶冷靜一下』，有時候突然認真一下但不要太長，"
+                        "整體講話要像 LINE 廢話王，不要太知識型，越像朋友越好。"
+                    )
+                },
                 {"role": "user", "content": user_msg}
             ]
         )
-        reply_text = response["choices"][0]["message"]["content"]
-        print("🤖 GPT 說：", reply_text)
-        return reply_text
+        reply = response["choices"][0]["message"]["content"]
+        print("🤖 GPT 回應：", reply)
+        return reply
     except Exception as e:
-        print("❌ GPT 爆炸：", str(e))
-        return "欸好像有點當機，你再說一次啦～"
+        print("❌ GPT 出錯：", str(e))
+        return "欸我剛剛 lag 了一下，再說一次啦 😵"
 
-# Webhook
+# LINE webhook 路由
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers['X-Line-Signature']
@@ -48,20 +51,20 @@ def callback():
         abort(400)
     return 'OK'
 
-# 處理訊息
+# 使用者傳文字訊息時觸發
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_msg = event.message.text
-    print("👂 收到訊息：", user_msg)
+    print("👂 使用者說：", user_msg)
 
-    # ➤ 控制回覆機率（20%）
+    # 懶人設定：只回 20% 的訊息
     if random.random() > 0.2:
-        print("😴 這輪跳過，先裝死一下")
+        print("😴 太懶了這輪不回")
         return
 
-    reply = taiwanese_trash_talk(user_msg)
+    reply = taiwanese_lazy_chat(user_msg)
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
 
-# 本地開發用
+# 本地用
 if __name__ == "__main__":
     app.run()
