@@ -5,8 +5,6 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, ImageSendMessage
 
-print("✅ app.py 正在運作！")
-
 # 初始化 Flask
 app = Flask(__name__)
 
@@ -19,6 +17,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # AI 回覆 + 梗圖 判斷
 def ai_response_with_meme(user_msg):
+    # 送出聊天內容給 GPT
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
@@ -29,9 +28,10 @@ def ai_response_with_meme(user_msg):
 
     reply_text = response["choices"][0]["message"]["content"]
 
+    # 梗圖邏輯（你可以自己加更多條件！）
     meme = None
     if "餓" in user_msg or "吃" in reply_text:
-        meme = "https://i.imgur.com/6hDFYxD.jpg"
+        meme = "https://i.imgur.com/6hDFYxD.jpg"  # 換成你自己的梗圖連結
     elif "累" in user_msg or "休息" in reply_text:
         meme = "https://i.imgur.com/XOW5ehK.jpg"
     elif "哭" in user_msg or "難過" in reply_text:
@@ -50,7 +50,7 @@ def callback():
         abort(400)
     return 'OK'
 
-# 訊息處理器
+# 使用者訊息處理（這段只要保留一次就好！）
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_msg = event.message.text
@@ -65,6 +65,6 @@ def handle_message(event):
 
     line_bot_api.reply_message(event.reply_token, messages)
 
-# 本地測試用
+# Render 不會用這段，但保留給本地測試
 if __name__ == "__main__":
     app.run()
