@@ -7,6 +7,11 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage, ImageSend
 
 print("✅ app.py 正在運作！")
 
+# 環境變數印出來看看有沒有問題
+print("🔑 LINE_TOKEN：", os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
+print("🔑 LINE_SECRET：", os.getenv('LINE_CHANNEL_SECRET'))
+print("🔑 OPENAI_KEY：", os.getenv("OPENAI_API_KEY"))
+
 # 初始化 Flask
 app = Flask(__name__)
 
@@ -54,7 +59,12 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_msg = event.message.text
+    print("📥 使用者傳來的訊息：", user_msg)
+
     reply_text, meme_url = ai_response_with_meme(user_msg)
+
+    print("🤖 GPT 回覆：", reply_text)
+    print("🖼️ 梗圖連結：", meme_url)
 
     messages = [TextSendMessage(text=reply_text)]
     if meme_url:
